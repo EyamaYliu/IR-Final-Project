@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 from urllib import parse, request
 #import tldextract
 import nltk
-nltk.download('popular')
 
 def get_links(root, html):
 
@@ -82,7 +81,16 @@ for lines in ingredient_lines:
         portion = lines[numpos]
         key = ' '.join(lines[numpos+1:])
 
-        ingredient_dict[key] = portion
+        #FIND RELEVANT FOOD NOUNS IN STRING
+        is_noun = lambda pos: (pos == 'NN' or pos == "NNS" or pos == "VB")
+        # do the nlp stuff
+        tokenized = nltk.word_tokenize(key)
+        print(nltk.pos_tag(tokenized))
+        #only want nouns
+        nouns = [word for (word, pos) in nltk.pos_tag(tokenized) if is_noun(pos)]
+        nouns = ' '.join(nouns)
+
+        ingredient_dict[nouns] = portion
 
 
 
