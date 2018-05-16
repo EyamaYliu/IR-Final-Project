@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from urllib import parse, request
 #import tldextract
 import nltk
+nltk.download('popular')
 
 def get_links(root, html):
 
@@ -16,8 +17,6 @@ def get_links(root, html):
             ing_lines.append(str(title))
     return ing_lines
 
-
-#Convert inputs like 1 3/4 into a float number
 def divider(lines,num):
 
     pos = lines.index(num)
@@ -43,25 +42,16 @@ measurement = [line.rstrip('\n') for line in open('Measurements')]
 #print(measurement)
 
 ingredient_lines = get_links(site,r.read())
-ingredient_dict = {}
 
-def noun_extracter(sentence):
-    #FIND RELEVANT FOOD NOUNS IN STRING
-    is_noun = lambda pos: pos == 'NN'
-    # do the nlp stuff
-    tokenized = nltk.word_tokenize(sentence)
-    #only want nouns
-    nouns = [word for (word, pos) in nltk.pos_tag(tokenized) if is_noun(pos)]
-    nouns = ' '.join(nouns)
-    print(nouns)
-    return nouns
-    
+
+ingredient_dict = {}
 
 for lines in ingredient_lines:
     YesUnit = False
     #Get rid of all parentheses
     lines = re.sub('[(){}<>]','',lines)
     lines = lines.split(' ')
+    print(lines)
     for word in lines:
         for unit in measurement:
             #Check if line contains standard unit
@@ -70,18 +60,27 @@ for lines in ingredient_lines:
                 key = ' '.join(lines[lines.index(word)+1:])
                 #print(key)
 
-                ingredient_dict[key] = portion
+                #FIND RELEVANT FOOD NOUNS IN STRING
+                is_noun = lambda pos: (pos == 'NN' or pos == "NNS" or pos == "VB")
+                # do the nlp stuff
+                tokenized = nltk.word_tokenize(key)
+                #print(nltk.pos_tag(tokenized))
+                #only want nouns
+                nouns = [word for (word, pos) in nltk.pos_tag(tokenized) if is_noun(pos)]
+                nouns = ' '.join(nouns)
+                #print(nouns)
+
+                ingredient_dict[nouns] = portion
                 YesUnit = True
     if not YesUnit:
         numpos = 0
         for i in range(len(lines)):
+            #print(lines[i])
             if '/' in lines[i]:
                 lines[i] = divider(lines,lines[i])
                 numpos = i
         portion = lines[numpos]
         key = ' '.join(lines[numpos+1:])
-
-
 
         ingredient_dict[key] = portion
 
