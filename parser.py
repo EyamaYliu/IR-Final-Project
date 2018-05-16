@@ -5,8 +5,14 @@ from bs4 import BeautifulSoup
 from urllib import parse, request
 #import tldextract
 import nltk
+import requests
 
 govApiKey = '6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ'
+
+sampleJsonQuery = 'https://api.nal.usda.gov/ndb/V2/reports?ndbno=01009&type=b&format=json&api_key=DEMO_KEY'
+
+r = requests.get(sampleJsonQuery)
+print(r.json())
 
 
 def get_links(root, html):
