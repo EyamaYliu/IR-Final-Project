@@ -6,6 +6,9 @@ from urllib import parse, request
 #import tldextract
 import nltk
 
+govApiKey = 6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ
+
+
 def get_links(root, html):
 
     ing_lines = []
