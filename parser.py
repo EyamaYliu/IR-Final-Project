@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 from urllib import parse, request
 #import tldextract
 import nltk
-nltk.download('popular')
 
 def get_links(root, html):
 
@@ -17,6 +16,8 @@ def get_links(root, html):
             ing_lines.append(str(title))
     return ing_lines
 
+
+#Convert inputs like 1 3/4 into a float number
 def divider(lines,num):
 
     pos = lines.index(num)
@@ -42,9 +43,19 @@ measurement = [line.rstrip('\n') for line in open('Measurements')]
 #print(measurement)
 
 ingredient_lines = get_links(site,r.read())
-
-
 ingredient_dict = {}
+
+def noun_extracter(sentence):
+    #FIND RELEVANT FOOD NOUNS IN STRING
+    is_noun = lambda pos: pos == 'NN'
+    # do the nlp stuff
+    tokenized = nltk.word_tokenize(sentence)
+    #only want nouns
+    nouns = [word for (word, pos) in nltk.pos_tag(tokenized) if is_noun(pos)]
+    nouns = ' '.join(nouns)
+    print(nouns)
+    return nouns
+    
 
 for lines in ingredient_lines:
     YesUnit = False
@@ -59,16 +70,7 @@ for lines in ingredient_lines:
                 key = ' '.join(lines[lines.index(word)+1:])
                 #print(key)
 
-                #FIND RELEVANT FOOD NOUNS IN STRING
-                is_noun = lambda pos: pos == 'NN'
-                # do the nlp stuff
-                tokenized = nltk.word_tokenize(key)
-                #only want nouns
-                nouns = [word for (word, pos) in nltk.pos_tag(tokenized) if is_noun(pos)]
-                nouns = ' '.join(nouns)
-                #print(nouns)
-
-                ingredient_dict[nouns] = portion
+                ingredient_dict[key] = portion
                 YesUnit = True
     if not YesUnit:
         numpos = 0
