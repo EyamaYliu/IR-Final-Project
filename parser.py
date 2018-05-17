@@ -8,7 +8,7 @@ import nltk
 import requests
 import json
 
-https://api.nal.usda.gov/ndb/search/?format=json&q=butter&sort=n&max=25&offset=0&api_key=DEMO_KEY
+
 
 
 ############################################
@@ -119,6 +119,30 @@ def ing_dict_creator(site):
 #for further calories check
 def food_name_search(ingredient):
 
+    govApiKey = '6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ'
+
+    ingredient = '+'.join(ingredient.split())
+   
+    
+    #sort by name:n, or by relevancy:r
+    sort = 'r'
+    #Database type:either 'Standard Reference' or 'Branded+Food+Products'
+    ds = 'Standard+Reference'
+
+    search_link = 'https://api.nal.usda.gov/ndb/search/?format=json&q='+ingredient+'&sort='+sort+'&ds='+ds+'&max=25&offset=0&api_key=' + govApiKey
+
+    print(search_link)
+    
+    result = requests.get(search_link)
+
+    result_json = result.json()
+    most_relevant_ndbno = result_json['list']['item'][0]['ndbno']
+    print(most_relevant_ndbno)
+
+
+
+    return most_relevant_ndbno
+
 
 
 
@@ -141,6 +165,12 @@ if __name__ == '__main__':
         #temp = ingredient_dict[key].split()
         
         print(key)
+        ndbno = food_name_search(key)
+    #ndbno = 
+    #ndbno = food_name_search('oil')
+
+
+'https://api.nal.usda.gov/ndb/search/?format=json&q=bell+pepper&sort=r&ds=Standard+Reference&max=25&offset=0&api_key=6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ'
 
     
 
