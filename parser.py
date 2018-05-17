@@ -72,8 +72,6 @@ def ing_dict_creator(site):
 
 
 
-    #print(measurement)
-
     ingredient_lines = get_recipe_ingredients(site,r.read())
 
 
@@ -111,17 +109,19 @@ def ing_dict_creator(site):
             #FIND RELEVANT FOOD NOUNS IN STRING
             nouns = noun_extract(key)
 
-            ingredient_dict[nouns] = portion
+            ingredient_dict[nouns] = str(portion)
        
     return ingredient_dict
 
+###############################
 #    Search for most relevant ingredient name in usda food database, return a ndbno
 #for further calories check
+###############################
+
 def food_name_search(ingredient):
+    most_relevant_ndbno = 0
 
     govApiKey = '6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ'
-
-    ingredient = '+'.join(ingredient.split())
    
     
     #sort by name:n, or by relevancy:r
@@ -129,21 +129,75 @@ def food_name_search(ingredient):
     #Database type:either 'Standard Reference' or 'Branded+Food+Products'
     ds = 'Standard+Reference'
 
-    search_link = 'https://api.nal.usda.gov/ndb/search/?format=json&q='+ingredient+'&sort='+sort+'&ds='+ds+'&max=25&offset=0&api_key=' + govApiKey
-
-    print(search_link)
-    
+    search_link = 'https://api.nal.usda.gov/ndb/search/?format=json&q='+ingredient+'&sort='+sort+'&ds='+ds+'&max=25&offset=0&api_key=' + govApiKey  
     result = requests.get(search_link)
-
     result_json = result.json()
+
+    #Handle no result situation, if errors in key of json, ask for a better result
+    while 'errors' in result_json:
+        print('\nSEARCH ERROR!')
+        print('Your Input:  "'+ingredient+'"  , did not yield any result')
+        ingredient = input("    Please try with a alternative input: ")
+        
+        updated_search_link = 'https://api.nal.usda.gov/ndb/search/?format=json&q='+ingredient+'&sort='+sort+'&ds='+ds+'&max=25&offset=0&api_key=' + govApiKey  
+        update_result = requests.get(updated_search_link)
+        result_json = update_result.json()        
+
     most_relevant_ndbno = result_json['list']['item'][0]['ndbno']
-    print(most_relevant_ndbno)
-
-
 
     return most_relevant_ndbno
 
+#    Takes input from the retrived dictionary portion part, like '1 pound', '4 tablespoons'
+#  and convert into either cup or grams. If can't automatically convert, it will require
+#  hand input
+def measurement_unification(name,portion):
+    portion = portion.split()
 
+    num_portion = 0
+    #Find the numerical part of the portion
+    for word in portion:
+        if word.isdigit():
+            num_portion = float(word)
+
+    measurement = [line.rstrip('\n') for line in open('Measurements')]
+    volume_units = ['cup','tablespoon','teaspoon','ounce','quart','gallon','pint']
+    volume_unit_convert = [1.0,0.0625,0.0208333,0.125,4.0,16.0,2.0]
+    weight_units = ['gram','pound']
+    weight_unit_convert = [1.0,453.6]
+
+    unit_Found = False
+    volume_Indicator = False
+
+
+    for word in portion:
+        for unit in measurement:
+            if unit in word:
+                #See if the unit belongs to standard volume units
+                if unit in volume_units:
+                    volume_Indicator = True
+                    unit_Found = True
+                    num_portion = num_portion * volume_unit_convert[volume_units.index(unit)]
+                #See if the unit belongs to standard weight units
+                elif unit in weight_units:
+                    unit_Found = True
+                    num_portion = num_portion * weight_unit_convert[weight_units.index(unit)]
+
+    #If not, hand input in estimation
+    while unit_Found == False and str(num_portion).isdigit() == False:
+        print('\nUNIT ERROR!')
+        print("This portion: \'"+' '.join(portion)+" of "+name+"\' does not contain a standard unit.")
+        num_portion = input("    Please enter an estimated weight, use unit 'gram':")
+                
+
+    if volume_Indicator == False:
+        result = str(num_portion)+ ' gram'
+    else:
+        result = str(num_portion)+ ' cup'   
+    
+    print(result) 
+
+    return result
+                    
 
 
 if __name__ == '__main__':
@@ -160,17 +214,12 @@ if __name__ == '__main__':
     #####################    
 
     ingredient_dict = ing_dict_creator(site)
-
     for key in ingredient_dict:
-        #temp = ingredient_dict[key].split()
-        
-        print(key)
+
         ndbno = food_name_search(key)
-    #ndbno = 
-    #ndbno = food_name_search('oil')
+        converted_portion = (measurement_unification(key,str(ingredient_dict[key]))).split()
+        
 
-
-'https://api.nal.usda.gov/ndb/search/?format=json&q=bell+pepper&sort=r&ds=Standard+Reference&max=25&offset=0&api_key=6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ'
 
     
 
