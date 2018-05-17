@@ -9,19 +9,9 @@ import requests
 import json
 
 
-
-
 ############################################
 #Request Api json with given ApiKey
 govApiKey = '6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ'
-
-sampleJsonQuery = 'https://api.nal.usda.gov/ndb/V2/reports?ndbno=01009&type=b&format=json&api_key='+ govApiKey
-
-r = requests.get(sampleJsonQuery)
-
-dict1 = r.json()
-
-print(dict1['foods'][0]['food']['desc']['name'])
 
 ############################################
 
@@ -90,7 +80,7 @@ def ing_dict_creator(site):
                 if unit in word:
                     portion = ' '.join(lines[lines.index(word)-1:lines.index(word)+1])
                     key = ' '.join(lines[lines.index(word)+1:])
-                    #print(key)
+                    
 
                     nouns = noun_extract(key)
 
@@ -113,39 +103,6 @@ def ing_dict_creator(site):
        
     return ingredient_dict
 
-###############################
-#    Search for most relevant ingredient name in usda food database, return a ndbno
-#for further calories check
-###############################
-
-def food_name_search(ingredient):
-    most_relevant_ndbno = 0
-
-    govApiKey = '6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ'
-   
-    
-    #sort by name:n, or by relevancy:r
-    sort = 'r'
-    #Database type:either 'Standard Reference' or 'Branded+Food+Products'
-    ds = 'Standard+Reference'
-
-    search_link = 'https://api.nal.usda.gov/ndb/search/?format=json&q='+ingredient+'&sort='+sort+'&ds='+ds+'&max=25&offset=0&api_key=' + govApiKey  
-    result = requests.get(search_link)
-    result_json = result.json()
-
-    #Handle no result situation, if errors in key of json, ask for a better result
-    while 'errors' in result_json:
-        print('\nSEARCH ERROR!')
-        print('Your Input:  "'+ingredient+'"  , did not yield any result')
-        ingredient = input("    Please try with a alternative input: ")
-        
-        updated_search_link = 'https://api.nal.usda.gov/ndb/search/?format=json&q='+ingredient+'&sort='+sort+'&ds='+ds+'&max=25&offset=0&api_key=' + govApiKey  
-        update_result = requests.get(updated_search_link)
-        result_json = update_result.json()        
-
-    most_relevant_ndbno = result_json['list']['item'][0]['ndbno']
-
-    return most_relevant_ndbno
 
 #    Takes input from the retrived dictionary portion part, like '1 pound', '4 tablespoons'
 #  and convert into either cup or grams. If can't automatically convert, it will require
@@ -194,9 +151,96 @@ def measurement_unification(name,portion):
     else:
         result = str(num_portion)+ ' cup'   
     
-    print(result) 
+    #print(result) 
 
     return result
+
+###############################
+#    Search for most relevant ingredient name in usda food database, return a ndbno
+#for further calories check
+###############################
+
+def food_name_search(ingredient):
+    most_relevant_ndbno = 0
+
+    govApiKey = '6slUSrUJs4voS0slTRjOGGjNlaYWI873fULgtnUQ'
+   
+    
+    #sort by name:n, or by relevancy:r
+    sort = 'r'
+    #Database type:either 'Standard Reference' or 'Branded+Food+Products'
+    ds = 'Standard+Reference'
+
+    search_link = 'https://api.nal.usda.gov/ndb/search/?format=json&q='+ingredient+'&sort='+sort+'&ds='+ds+'&max=25&offset=0&api_key=' + govApiKey  
+    result = requests.get(search_link)
+    result_json = result.json()
+
+    #Handle no result situation, if errors in key of json, ask for a better result
+    while 'errors' in result_json:
+        print('\nSEARCH ERROR!')
+        print('Your Input:  "'+ingredient+'"  , did not yield any result')
+        ingredient = input("    Please try with a alternative input: ")
+        
+        updated_search_link = 'https://api.nal.usda.gov/ndb/search/?format=json&q='+ingredient+'&sort='+sort+'&ds='+ds+'&max=25&offset=0&api_key=' + govApiKey  
+        update_result = requests.get(updated_search_link)
+        result_json = update_result.json()        
+
+    most_relevant_ndbno = result_json['list']['item'][0]['ndbno']
+
+    return most_relevant_ndbno
+
+####################
+#  Take input of ndbno number, and retrive the matching food info
+#  No error catching, as ndbno must be valid from previous function
+####################
+def food_info_retrival(ndbno,portion,name):
+
+
+    info_search_link = 'https://api.nal.usda.gov/ndb/V2/reports?ndbno='+ndbno+'&type=b&format=json&api_key='+ govApiKey
+
+    info_result = requests.get(info_search_link)
+
+    info_result_json = info_result.json()
+
+    weight_unit = ['g','gram']
+    volume_unit = ['cup']
+
+    #Check whether the recorded unit is for gram or cup
+
+    perGramKcal =perCupKcal = 0
+
+
+    nutrient_info = info_result_json['foods'][0]['food']['nutrients']
+    for key in nutrient_info:
+        if key['name'] == 'Energy':
+            for measures in key['measures']:
+                if measures['eunit'] in weight_unit:
+                    perGramKcal = float(key['measures'][0]['value'])/float(key['measures'][0]['eqv'])
+                    
+                elif measures['eunit'] in volume_unit:
+                    perCupKcal = float(key['measures'][0]['value'])/float(key['measures'][0]['eqv'])
+
+    #If the portion unit does not match with database's avaliablity 
+    if portion[1] == 'gram' and perGramKcal == 0 or portion[1] == 'cup' and perCupKcal == 0:
+        print('\nERROR:')        
+        print('Unfortunately: The database does not contain info in the input unit:')
+        print("    \'"+name+"\' In the unit of "+portion[1])
+        if portion[1] == 'gram':
+            portion[0] = input('Please convert '+portion[0]+' '+portion[1]+' of '+name+' into cups: ')
+            portion[1] = 'cup'
+        elif portion[1] == 'cup':
+            portion[0] = input('Please convert '+portion[0]+' '+portion[1]+' of '+name+' into grams: ')
+            portion[1] = 'gram'
+
+    kcal = 0
+
+    if portion[1] == 'gram':
+        kcal = float(portion[0]) * perGramKcal
+    if portion[1] == 'cup':
+        kcal = float(portion[0]) * perCupKcal
+
+    return kcal
+                    
                     
 
 
@@ -214,11 +258,28 @@ if __name__ == '__main__':
     #####################    
 
     ingredient_dict = ing_dict_creator(site)
+
+    total_kcal = 0
+    name_in_order = []
+    kcal_in_order = []
+
     for key in ingredient_dict:
 
         ndbno = food_name_search(key)
         converted_portion = (measurement_unification(key,str(ingredient_dict[key]))).split()
-        
+
+        name_in_order.append(key)
+        kcal = food_info_retrival(ndbno,converted_portion,key)
+        kcal_in_order.append(kcal)
+        total_kcal += kcal
+
+    print("#################################################")
+    print("I know it has been long! But here are the results!")
+    print("#################################################")
+    for i in range(len(name_in_order)):
+        print(str(name_in_order[i])+" contains "+ str(kcal_in_order[i])+" kcal of energy")
+
+    print("The total energy contained in this dish is "+str(total_kcal)+" kcal!")
 
 
     
