@@ -8,6 +8,8 @@ import nltk
 import requests
 import json
 
+https://api.nal.usda.gov/ndb/search/?format=json&q=butter&sort=n&max=25&offset=0&api_key=DEMO_KEY
+
 
 ############################################
 #Request Api json with given ApiKey
